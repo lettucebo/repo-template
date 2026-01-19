@@ -1,0 +1,7 @@
+{
+  "github.copilot.chat.commitMessageGeneration.instructions": [
+    {
+      "text": "Use conventional commit message format. And make sure the commit message is concise and descriptive. Also having body. Footer is optional."
+    }
+  ]
+}
