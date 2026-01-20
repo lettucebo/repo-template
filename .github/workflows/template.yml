@@ -112,6 +112,44 @@ jobs:
             core.setOutput('results', JSON.stringify(results));
             return results;
 
+      - name: Update README.md
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            console.log('📝 Updating README.md with repository name...');
+            
+            try {
+              // Get current README.md
+              const { data: readmeData } = await github.rest.repos.getContent({
+                owner,
+                repo,
+                path: 'README.md'
+              });
+              
+              // Decode content
+              const content = Buffer.from(readmeData.content, 'base64').toString('utf-8');
+              
+              // Replace the first heading with the repository name
+              const updatedContent = content.replace(/^#\s+.+$/m, `# ${repo}`);
+              
+              // Update README.md
+              await github.rest.repos.createOrUpdateFileContents({
+                owner,
+                repo,
+                path: 'README.md',
+                message: 'docs: update README title with repository name',
+                content: Buffer.from(updatedContent).toString('base64'),
+                sha: readmeData.sha
+              });
+              
+              console.log('✅ README.md updated successfully');
+            } catch (error) {
+              console.log('⚠️  README.md update:', error.message);
+            }
+
       - name: Configure Copilot Coding Agent
         uses: actions/github-script@v7
         with:
