@@ -1,0 +1,112 @@
+name: Repository Template Setup
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  security-events: write
+  issues: write
+  actions: write
+
+jobs:
+  setup:
+    name: Setup Repository
+    # Only run if this is not the template repository
+    if: |
+      !github.event.repository.is_template
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup GitHub Repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            console.log('🚀 Starting repository setup...');
+            
+            // Step 1: Enable GitHub Advanced Security features
+            console.log('📊 Enabling GitHub Advanced Security features...');
+            
+            try {
+              // Enable vulnerability alerts
+              await github.rest.repos.enableVulnerabilityAlerts({
+                owner,
+                repo
+              });
+              console.log('✅ Vulnerability alerts enabled');
+            } catch (error) {
+              console.log('⚠️  Vulnerability alerts:', error.message);
+            }
+            
+            try {
+              // Enable automated security fixes (Dependabot)
+              await github.rest.repos.enableAutomatedSecurityFixes({
+                owner,
+                repo
+              });
+              console.log('✅ Automated security fixes enabled');
+            } catch (error) {
+              console.log('⚠️  Automated security fixes:', error.message);
+            }
+            
+            // Step 2: Create the label
+            console.log('🏷️  Creating label...');
+            
+            try {
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: 'run-release',
+                description: 'It will trigger the release for the PR',
+                color: 'E9D05A'
+              });
+              console.log('✅ Label "run-release" created successfully');
+            } catch (error) {
+              if (error.status === 422) {
+                console.log('ℹ️  Label "run-release" already exists');
+              } else {
+                console.log('❌ Error creating label:', error.message);
+              }
+            }
+            
+            console.log('✅ Repository setup completed!');
+
+      - name: Delete this workflow
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const path = '.github/workflows/template.yml';
+            
+            console.log('🗑️  Deleting template.yml...');
+            
+            try {
+              // Get the file to obtain its SHA
+              const { data: fileData } = await github.rest.repos.getContent({
+                owner,
+                repo,
+                path
+              });
+              
+              // Delete the file
+              await github.rest.repos.deleteFile({
+                owner,
+                repo,
+                path,
+                message: 'chore: remove template.yml after setup completion',
+                sha: fileData.sha
+              });
+              
+              console.log('✅ template.yml deleted successfully');
+            } catch (error) {
+              console.log('❌ Error deleting template.yml:', error.message);
+            }
